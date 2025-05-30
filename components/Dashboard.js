@@ -67,7 +67,7 @@ export default function Dashboard({ navigation }) {
             renderItem={({ item }) => (
               <Card style={styles.card}>
                 <Card.Title 
-                  title={`RFID: ${item.rfid}`}
+                  title={`${item.rfid}`}
                   titleStyle={styles.cardTitle}
                   left={(props) => (
                     <Icon {...props} name="tag" size={24} color={colors.primary} />
