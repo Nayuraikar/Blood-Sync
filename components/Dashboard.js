@@ -1,16 +1,34 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, FlatList, ScrollView } from 'react-native';
-import { Button, Card, Text, Surface, Title, Paragraph } from 'react-native-paper';
+import { Button, Card, Text, Surface, Title, Paragraph, Portal, Dialog } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, shadows } from '../utils/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
 
 export default function Dashboard({ navigation }) {
   const [bloodBags, setBloodBags] = useState([]);
+  const [alertVisible, setAlertVisible] = useState(false);
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', loadBloodBags);
-    return unsubscribe;
+    const securityInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(
+          'https://blynk.cloud/external/api/get?token=d5GPxcfxGojAvfzCb6QH0qW3DRycxBfA&v4'
+        );
+        if (response.data.trim() === 'SECURITY ALERT') {
+          setAlertVisible(true);
+        }
+      } catch (e) {
+        console.error('Error fetching security alert from Blynk:', e);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    return () => {
+      unsubscribe();
+      clearInterval(securityInterval);
+    };
   }, [navigation]);
 
   const loadBloodBags = async () => {
@@ -20,6 +38,16 @@ export default function Dashboard({ navigation }) {
       else setBloodBags([]);
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const hideDialog = async () => {
+    try {
+      await axios.get('https://blynk.cloud/external/api/update?token=d5GPxcfxGojAvfzCb6QH0qW3DRycxBfA&v4=System%20Secure');
+      setAlertVisible(false);
+    } catch (e) {
+      console.error('Failed to reset security alert on Blynk:', e);
+      setAlertVisible(false); // Still hide dialog on error
     }
   };
 
@@ -56,6 +84,21 @@ export default function Dashboard({ navigation }) {
   );
 
   return (
+    <>
+    <Portal>
+        <Dialog visible={alertVisible} onDismiss={hideDialog} style={styles.alertDialg}>
+          <Dialog.Icon icon="shield-alert" size={64} color={colors.error} />
+          <Dialog.Title style={styles.alertTitle}>Security Alert!</Dialog.Title>
+          <Dialog.Content>
+            <Paragraph style={styles.alertText}>
+              Multiple incorrect password attempts detected with motion present near the device.
+            </Paragraph>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={hideDialog} mode="contained" style={{backgroundColor: colors.primary}}>Acknowledge</Button>
+          </Dialog.Actions>
+        </Dialog>
+      </Portal>
     <ScrollView style={styles.scrollView}>
       <Surface style={styles.header}>
         <Icon name="hospital-box" size={40} color={colors.primary} style={styles.headerIcon} />
@@ -148,6 +191,7 @@ export default function Dashboard({ navigation }) {
         </View>
       </View>
     </ScrollView>
+    </>
   );
 }
 
@@ -264,5 +308,17 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
     fontSize: typography.fontSizes.md,
     color: colors.text,
+  },
+  alertDialg: {
+    marginBottom: spacing.md,
+    ...shadows.medium,
+    backgroundColor: colors.surface,
+  },
+  alertTitle: {
+    textAlign: 'center',
+  },
+  alertText: {
+    textAlign: 'center',
+    fontSize: typography.fontSizes.md,
   },
 });
