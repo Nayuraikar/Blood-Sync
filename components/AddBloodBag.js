@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, KeyboardAvoidingView } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { View, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { TextInput, Button, Text, Card, Title, Paragraph } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function AddBloodBag({ navigation }) {
   const [passwordValue, setPasswordValue] = useState('');
@@ -79,6 +81,10 @@ export default function AddBloodBag({ navigation }) {
       bloodBags.push({ rfid, bloodType, collectionDate, expiryDate });
 
       await AsyncStorage.setItem('bloodBags', JSON.stringify(bloodBags));
+
+      // Reset the Blynk PIN to 0
+      await axios.get('https://blynk.cloud/external/api/update?token=d5GPxcfxGojAvfzCb6QH0qW3DRycxBfA&v0=0');
+
       Alert.alert('Success', 'Blood bag saved');
       navigation.goBack();
     } catch (e) {
@@ -88,67 +94,128 @@ export default function AddBloodBag({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={styles.container}>
-      <Text style={styles.label}>Current Password Value (Blynk V0): {passwordValue}</Text>
+    <LinearGradient colors={['#E53E3E', '#E53E3E']} style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === "ios" ? "padding" : "height"} 
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.title}>Add New Blood Bag</Title>
+              <Paragraph style={styles.label}>Current Password Value (Blynk V0): {passwordValue}</Paragraph>
 
-      {!authenticated && (
-        <Text style={{ marginTop: 20, fontWeight: 'bold' }}>Waiting for correct password...</Text>
-      )}
+              {!authenticated && (
+                <View style={styles.statusContainer}>
+                  <Icon name="lock-clock" size={50} color="#ff6347" />
+                  <Text style={styles.statusText}>Waiting for correct password...</Text>
+                </View>
+              )}
 
-      {authenticated && (
-        <>
-          <Text style={{ marginTop: 20, fontWeight: 'bold' }}>Access Granted! Please scan RFID tag.</Text>
+              {authenticated && (
+                <>
+                  <View style={styles.statusContainer}>
+                    <Icon name="lock-open-variant" size={50} color="#4caf50" />
+                    <Text style={styles.statusText}>Access Granted! Please scan RFID tag.</Text>
+                  </View>
 
-          {waitingForRFID ? (
-            <Text style={{ marginVertical: 20, fontWeight: 'bold' }}>Waiting for RFID scan...</Text>
-          ) : (
-            <>
-              <Text style={styles.label}>Scanned Blood Bag RFID UID:</Text>
-              <TextInput
-                value={rfid}
-                editable={false}
-                placeholder="RFID UID will auto-populate"
-                style={styles.input}
-              />
+                  {waitingForRFID ? (
+                    <View style={styles.statusContainer}>
+                      <Icon name="barcode-scan" size={50} color="#ffc107" />
+                      <Text style={styles.statusText}>Waiting for RFID scan...</Text>
+                    </View>
+                  ) : (
+                    <>
+                      <TextInput
+                        label="Scanned Blood Bag RFID UID"
+                        value={rfid}
+                        editable={false}
+                        style={styles.input}
+                        left={<TextInput.Icon name="barcode" />}
+                      />
 
-              <Text style={styles.label}>Blood Type (e.g. A+, O-):</Text>
-              <TextInput
-                value={bloodType}
-                onChangeText={setBloodType}
-                placeholder="Blood Type"
-                style={styles.input}
-              />
+                      <TextInput
+                        label="Blood Type (e.g. A+, O-)"
+                        value={bloodType}
+                        onChangeText={setBloodType}
+                        style={styles.input}
+                        left={<TextInput.Icon name="water-outline" />}
+                      />
 
-              <Text style={styles.label}>Collection Date (YYYY-MM-DD):</Text>
-              <TextInput
-                value={collectionDate}
-                onChangeText={setCollectionDate}
-                placeholder="Collection Date"
-                style={styles.input}
-              />
+                      <TextInput
+                        label="Collection Date (YYYY-MM-DD)"
+                        value={collectionDate}
+                        onChangeText={setCollectionDate}
+                        style={styles.input}
+                        left={<TextInput.Icon name="calendar" />}
+                      />
 
-              <Text style={styles.label}>Expiry Date (YYYY-MM-DD):</Text>
-              <TextInput
-                value={expiryDate}
-                onChangeText={setExpiryDate}
-                placeholder="Expiry Date"
-                style={styles.input}
-              />
+                      <TextInput
+                        label="Expiry Date (YYYY-MM-DD)"
+                        value={expiryDate}
+                        onChangeText={setExpiryDate}
+                        style={styles.input}
+                        left={<TextInput.Icon name="calendar-clock" />}
+                      />
 
-              <Button mode="contained" onPress={onSave} style={styles.button}>
-                Save Blood Bag
-              </Button>
-            </>
-          )}
-        </>
-      )}
-    </KeyboardAvoidingView>
+                      <Button mode="contained" onPress={onSave} style={styles.button} icon="content-save">
+                        Save Blood Bag
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  label: { marginTop: 10, fontWeight: 'bold' },
-  input: { backgroundColor: 'white', marginBottom: 10 },
-  button: { marginTop: 20 },
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    borderRadius: 15,
+    padding: 10,
+    elevation: 4,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  label: { 
+    marginTop: 10, 
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  statusContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  statusText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  input: { 
+    marginBottom: 15,
+    backgroundColor: 'white',
+  },
+  button: { 
+    marginTop: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
 });

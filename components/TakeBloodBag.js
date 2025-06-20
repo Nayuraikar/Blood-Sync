@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Alert, KeyboardAvoidingView } from 'react-native';
-import { TextInput, Button, Text } from 'react-native-paper';
+import { View, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
+import { TextInput, Button, Text, Card, Title, Paragraph } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import { LinearGradient } from 'expo-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 export default function TakeBloodBag({ navigation }) {
   const [passwordValue, setPasswordValue] = useState('');
@@ -81,6 +83,10 @@ export default function TakeBloodBag({ navigation }) {
 
       bloodBags = bloodBags.filter(bag => bag.rfid !== rfid);
       await AsyncStorage.setItem('bloodBags', JSON.stringify(bloodBags));
+      
+      // Reset the Blynk PIN to 0
+      await axios.get('https://blynk.cloud/external/api/update?token=d5GPxcfxGojAvfzCb6QH0qW3DRycxBfA&v0=0');
+
       Alert.alert('Success', 'Blood bag taken and removed!');
       setStatus('');
       setRfid('');
@@ -94,40 +100,109 @@ export default function TakeBloodBag({ navigation }) {
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={styles.container}>
-      <Text style={styles.label}>Current Password Value (Blynk V0): {passwordValue}</Text>
+    <LinearGradient colors={['#E53E3E', '#E53E3E']} style={styles.container}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.scrollView}>
+          <Card style={styles.card}>
+            <Card.Content>
+              <Title style={styles.title}>Take Blood Bag</Title>
+              <Paragraph style={styles.label}>Current Password Value (Blynk V0): {passwordValue}</Paragraph>
 
-      {!authenticated && (
-        <Text style={{ marginTop: 20, fontWeight: 'bold' }}>Waiting for correct password...</Text>
-      )}
+              {!authenticated && (
+                <View style={styles.statusContainer}>
+                  <Icon name="lock-clock" size={50} color="#ff6347" />
+                  <Text style={styles.statusText}>Waiting for correct password...</Text>
+                </View>
+              )}
 
-      {authenticated && (
-        <>
-          <Text style={{ marginTop: 20, fontWeight: 'bold' }}>
-            Access Granted! Please scan RFID tag.
-          </Text>
-          {waitingForRFID ? (
-            <Text style={{ marginVertical: 20, fontWeight: 'bold' }}>Waiting for RFID scan...</Text>
-          ) : (
-            <>
-              <Text style={styles.label}>Scanned RFID UID:</Text>
-              <TextInput value={rfid} editable={false} style={styles.input} />
-              <Button mode="contained" onPress={onTakeBloodBag} style={styles.button}>
-                Take Blood Bag
-              </Button>
-            </>
-          )}
-        </>
-      )}
+              {authenticated && (
+                <>
+                  <View style={styles.statusContainer}>
+                    <Icon name="lock-open-variant" size={50} color="#4caf50" />
+                    <Text style={styles.statusText}>Access Granted! Please scan RFID tag.</Text>
+                  </View>
 
-      {status ? <Text style={{ marginTop: 10 }}>{status}</Text> : null}
-    </KeyboardAvoidingView>
+                  {waitingForRFID ? (
+                    <View style={styles.statusContainer}>
+                      <Icon name="barcode-scan" size={50} color="#ffc107" />
+                      <Text style={styles.statusText}>Waiting for RFID scan...</Text>
+                    </View>
+                  ) : (
+                    <>
+                      <TextInput
+                        label="Scanned RFID UID"
+                        value={rfid}
+                        editable={false}
+                        style={styles.input}
+                        left={<TextInput.Icon name="barcode" />}
+                      />
+                      <Button
+                        mode="contained"
+                        onPress={onTakeBloodBag}
+                        style={styles.button}
+                        icon="minus-circle"
+                      >
+                        Take Blood Bag
+                      </Button>
+                    </>
+                  )}
+                </>
+              )}
+              {status ? <Text style={styles.statusText}>{status}</Text> : null}
+            </Card.Content>
+          </Card>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, justifyContent: 'center' },
-  label: { marginTop: 10, fontWeight: 'bold' },
-  input: { backgroundColor: 'white', marginBottom: 10 },
-  button: { marginTop: 20 },
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  card: {
+    borderRadius: 15,
+    padding: 10,
+    elevation: 4,
+  },
+  title: {
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    fontWeight: 'bold',
+  },
+  label: {
+    marginTop: 10,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  statusContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  statusText: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  input: {
+    marginBottom: 15,
+    backgroundColor: 'white',
+  },
+  button: {
+    marginTop: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
 });

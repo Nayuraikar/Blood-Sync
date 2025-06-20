@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, FlatList, ScrollView } from 'react-native';
-import { Button, Card, Text, Surface } from 'react-native-paper';
+import { Button, Card, Text, Surface, Title, Paragraph } from 'react-native-paper';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, typography, shadows } from '../utils/theme';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -22,6 +22,38 @@ export default function Dashboard({ navigation }) {
       console.error(e);
     }
   };
+
+  const summaryData = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(today.getDate() + 7);
+    sevenDaysFromNow.setHours(0, 0, 0, 0);
+
+    const expiringSoon = bloodBags.filter(bag => {
+      const expiryDate = new Date(bag.expiryDate);
+      return expiryDate >= today && expiryDate <= sevenDaysFromNow;
+    });
+
+    const expired = bloodBags.filter(bag => new Date(bag.expiryDate) < today);
+
+    return {
+      total: bloodBags.length,
+      expiringSoon: expiringSoon.length,
+      expired: expired.length,
+    };
+  }, [bloodBags]);
+
+  const SummaryCard = ({ title, count, icon, color }) => (
+    <Card style={styles.summaryCard}>
+      <Card.Content style={styles.summaryCardContent}>
+        <Icon name={icon} size={32} color={color} />
+        <Title style={styles.summaryCount}>{count}</Title>
+        <Paragraph style={styles.summaryTitle}>{title}</Paragraph>
+      </Card.Content>
+    </Card>
+  );
 
   return (
     <ScrollView style={styles.scrollView}>
@@ -53,44 +85,67 @@ export default function Dashboard({ navigation }) {
           </Button>
         </View>
 
-        <Text style={styles.sectionTitle}>Current Inventory</Text>
-
-        {bloodBags.length === 0 ? (
-          <Surface style={styles.emptyState}>
-            <Icon name="blood-bag" size={48} color={colors.placeholder} />
-            <Text style={styles.emptyStateText}>No blood bags recorded</Text>
-          </Surface>
-        ) : (
-          <FlatList
-            data={bloodBags}
-            keyExtractor={(item) => item.rfid}
-            renderItem={({ item }) => (
-              <Card style={styles.card}>
-                <Card.Title 
-                  title={`${item.rfid}`}
-                  titleStyle={styles.cardTitle}
-                  left={(props) => (
-                    <Icon {...props} name="tag" size={24} color={colors.primary} />
-                  )}
-                />
-                <Card.Content>
-                  <View style={styles.cardRow}>
-                    <Icon name="blood-type" size={20} color={colors.secondary} />
-                    <Text style={styles.cardText}>Blood Type: {item.bloodType}</Text>
-                  </View>
-                  <View style={styles.cardRow}>
-                    <Icon name="calendar-plus" size={20} color={colors.secondary} />
-                    <Text style={styles.cardText}>Collection Date: {item.collectionDate}</Text>
-                  </View>
-                  <View style={styles.cardRow}>
-                    <Icon name="calendar-clock" size={20} color={colors.secondary} />
-                    <Text style={styles.cardText}>Expiry Date: {item.expiryDate}</Text>
-                  </View>
-                </Card.Content>
-              </Card>
+        <View style={styles.mainContent}>
+          <View style={styles.inventorySection}>
+            <Text style={styles.sectionTitle}>Current Inventory</Text>
+            {bloodBags.length === 0 ? (
+              <Surface style={styles.emptyState}>
+                <Icon name="blood-bag" size={48} color={colors.placeholder} />
+                <Text style={styles.emptyStateText}>No blood bags recorded</Text>
+              </Surface>
+            ) : (
+              <FlatList
+                data={bloodBags}
+                keyExtractor={(item) => item.rfid}
+                renderItem={({ item }) => (
+                  <Card style={styles.card}>
+                    <Card.Title 
+                      title={`${item.rfid}`}
+                      titleStyle={styles.cardTitle}
+                      left={(props) => (
+                        <Icon {...props} name="tag" size={24} color={colors.primary} />
+                      )}
+                    />
+                    <Card.Content>
+                      <View style={styles.cardRow}>
+                        <Icon name="water" size={20} color={colors.secondary} />
+                        <Text style={styles.cardText}>Blood Type: {item.bloodType}</Text>
+                      </View>
+                      <View style={styles.cardRow}>
+                        <Icon name="calendar-plus" size={20} color={colors.secondary} />
+                        <Text style={styles.cardText}>Collection Date: {item.collectionDate}</Text>
+                      </View>
+                      <View style={styles.cardRow}>
+                        <Icon name="calendar-clock" size={20} color={colors.secondary} />
+                        <Text style={styles.cardText}>Expiry Date: {item.expiryDate}</Text>
+                      </View>
+                    </Card.Content>
+                  </Card>
+                )}
+              />
             )}
-          />
-        )}
+          </View>
+          <View style={styles.summarySection}>
+             <SummaryCard 
+              title="Total Bags" 
+              count={summaryData.total} 
+              icon="briefcase-variant"
+              color={colors.primary}
+            />
+            <SummaryCard 
+              title="Expiring Soon" 
+              count={summaryData.expiringSoon} 
+              icon="clock-alert-outline"
+              color={colors.warning}
+            />
+            <SummaryCard 
+              title="Expired" 
+              count={summaryData.expired} 
+              icon="close-circle-outline"
+              color={colors.error}
+            />
+          </View>
+        </View>
       </View>
     </ScrollView>
   );
@@ -125,6 +180,38 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: spacing.lg,
+  },
+  mainContent: {
+    flexDirection: 'row',
+    flex: 1,
+  },
+  inventorySection: {
+    flex: 3, // Takes up 75% of the space
+    marginRight: spacing.lg,
+  },
+  summarySection: {
+    flex: 1, // Takes up 25% of the space
+    justifyContent: 'flex-start',
+  },
+  summaryCard: {
+    marginBottom: spacing.md,
+    ...shadows.medium,
+    backgroundColor: colors.surface,
+  },
+  summaryCardContent: {
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  summaryCount: {
+    fontSize: typography.fontSizes.xxxl,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.text,
+    marginVertical: spacing.xs,
+  },
+  summaryTitle: {
+    fontSize: typography.fontSizes.md,
+    color: colors.placeholder,
+    textAlign: 'center',
   },
   buttonContainer: {
     flexDirection: 'row',
