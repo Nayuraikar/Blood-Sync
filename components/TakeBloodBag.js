@@ -12,6 +12,9 @@ export default function TakeBloodBag({ navigation }) {
   const [rfid, setRfid] = useState('');
   const [status, setStatus] = useState('');
   const [waitingForRFID, setWaitingForRFID] = useState(true);
+  const [bloodType, setBloodType] = useState('');
+  const [collectionDate, setCollectionDate] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
 
   // Poll Blynk V0 for password value every 3 seconds
   useEffect(() => {
@@ -61,6 +64,37 @@ export default function TakeBloodBag({ navigation }) {
 
     return () => clearInterval(rfidInterval);
   }, [authenticated, rfid]);
+
+  // Fetch blood bag details when RFID is scanned
+  useEffect(() => {
+    const fetchDetails = async () => {
+      if (rfid) {
+        try {
+          const stored = await AsyncStorage.getItem('bloodBags');
+          let bloodBags = stored ? JSON.parse(stored) : [];
+          const bag = bloodBags.find(b => b.rfid === rfid);
+          if (bag) {
+            setBloodType(bag.bloodType || 'N/A');
+            setCollectionDate(bag.collectionDate || 'N/A');
+            setExpiryDate(bag.expiryDate || 'N/A');
+          } else {
+            setBloodType('N/A');
+            setCollectionDate('N/A');
+            setExpiryDate('N/A');
+          }
+        } catch (e) {
+          setBloodType('N/A');
+          setCollectionDate('N/A');
+          setExpiryDate('N/A');
+        }
+      } else {
+        setBloodType('');
+        setCollectionDate('');
+        setExpiryDate('');
+      }
+    };
+    fetchDetails();
+  }, [rfid]);
 
   // When user presses button to take blood bag
   const onTakeBloodBag = async () => {
@@ -133,11 +167,32 @@ export default function TakeBloodBag({ navigation }) {
                   ) : (
                     <>
                       <TextInput
-                        label="Scanned RFID UID"
+                        label="Scanned Blood Bag RFID UID"
                         value={rfid}
                         editable={false}
                         style={styles.input}
                         left={<TextInput.Icon name="barcode" />}
+                      />
+                      <TextInput
+                        label="Blood Type (e.g. A+, O-)"
+                        value={bloodType}
+                        editable={false}
+                        style={styles.input}
+                        left={<TextInput.Icon name="water-outline" />}
+                      />
+                      <TextInput
+                        label="Collection Date (YYYY-MM-DD)"
+                        value={collectionDate}
+                        editable={false}
+                        style={styles.input}
+                        left={<TextInput.Icon name="calendar" />}
+                      />
+                      <TextInput
+                        label="Expiry Date (YYYY-MM-DD)"
+                        value={expiryDate}
+                        editable={false}
+                        style={styles.input}
+                        left={<TextInput.Icon name="calendar-clock" />}
                       />
                       <Button
                         mode="contained"
