@@ -1,17 +1,17 @@
-# Blood Sync 🩸
+# Blood Sync 
 
 Blood Sync is an intelligent blood bank management system built with React Native and Expo, designed to streamline blood inventory control and access management for healthcare facilities.
 
 ## Features
 
-- 📱 Cross-platform mobile application (iOS & Android)
-- 🏥 Real-time blood inventory tracking
-- 🏷️ RFID-based blood bag management
-- 📊 Dashboard with inventory overview
-- 📅 Expiry date tracking
-- 🩸 Blood type management
-- ➕ Add new blood bags
-- ➖ Remove blood bags from inventory
+-  Cross-platform mobile application (iOS & Android)
+-  Real-time blood inventory tracking
+-  RFID-based blood bag management
+-  Dashboard with inventory overview
+-  Expiry date tracking
+-  Blood type management
+-  Add new blood bags
+-  Remove blood bags from inventory
 
 ## Tech Stack
 
